@@ -8,7 +8,7 @@ It uses rsf's favorites handling methodology and replaces the currents favorites
 It's primary goal was to allow checking an online rally stages from the RSF's website, and, using the application, create a new favorites file with all the stages from the online rally, this would allow the players to see all the stages in the "Favorites" category of the "Practice" mode.
 
 # Installation
-Download the zip from the releases and extract it. The executable will be available on the extracted folder.
+Download the zip from the [releases](https://github.com/digoblin/rbr_favorites_manager/releases) and extract it. The executable will be available on the extracted folder.
 
 ## Compilation
 If you would rather compile it yourself, you can use **pyinstaller** to do so:
