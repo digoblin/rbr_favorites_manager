@@ -149,6 +149,7 @@ class ListBoxExample(QWidget):
         #TableView
 
         self.maps_tableview = QTableView()
+        self.maps_tableview.setSortingEnabled(True)
         # self.maps_tableview.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.favs_tableview = QTableView()
         self.favs_tableview.setSortingEnabled(True)
@@ -305,7 +306,8 @@ class ListBoxExample(QWidget):
         self.search_box.textChanged.connect(self.proxy_model.setFilterFixedString)
 
         self.maps_tableview.setModel(self.proxy_model)
-        self.maps_tableview.setSortingEnabled(True)
+        self.maps_tableview.doubleClicked.connect(self.add_to_favorites)
+
 
     def add_to_favorites(self):
         """
@@ -406,6 +408,7 @@ class ListBoxExample(QWidget):
         # self.search_box.textChanged.connect(proxy_model.setFilterFixedString)
 
         self.favs_tableview.setModel(proxy_model)
+        self.favs_tableview.doubleClicked.connect(self.remove_from_favorites)
 
 
 
