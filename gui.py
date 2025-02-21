@@ -196,6 +196,8 @@ class ListBoxExample(QWidget):
         # maps_layout = QHBoxLayout()
         # maps_layout.addWidget(self.maps_table)
         fav_buttons_layout = QVBoxLayout()
+        self.add_fav_button.setMinimumHeight(40)
+        self.remove_fav_button.setMinimumHeight(40)
         fav_buttons_layout.addWidget(self.add_fav_button)
         fav_buttons_layout.addWidget(self.remove_fav_button)
         # maps_layout.addLayout(fav_buttons_layout)
