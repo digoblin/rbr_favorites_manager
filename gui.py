@@ -3,7 +3,7 @@ from PyQt6 import QtCore
 from PyQt6.QtCore import Qt, QSortFilterProxyModel
 from PyQt6.QtWidgets import QFileDialog, QFrame, QHeaderView, QApplication, QHBoxLayout, QWidget, QVBoxLayout, \
     QListWidget, QPushButton, QLabel, QLineEdit, QStatusBar, QMainWindow, QTableWidget, QTableWidgetItem, QGridLayout, \
-    QSizePolicy, QTableView
+    QSizePolicy, QTableView, QComboBox
 from PyQt6.QtGui import QFont
 
 import favorite_api
@@ -15,7 +15,7 @@ class StageTableModel(QtCore.QAbstractTableModel):
         super().__init__()
         self._data = data
 
-    def data(self, index, role):
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole:
             # See below for the nested-list data structure.
             # .row() indexes into the outer list,
@@ -53,6 +53,45 @@ class StageTableModel(QtCore.QAbstractTableModel):
                     return "New"
                 elif section == 7:
                     return "Installed"
+
+
+class StagesFilterProxyModel(QSortFilterProxyModel):
+    def __init__(self):
+        super().__init__()
+        self.filter_surface = ""
+        self.filter_country = ""
+        self.filter_text = ""
+
+    def setFilterSurface(self, surface):
+        self.filter_surface = surface
+        self.invalidateFilter()  # Triggers a refresh of the filtering
+
+    def setFilterCountry(self, country):
+        self.filter_country = country
+        self.invalidateFilter()  # Triggers a refresh of the filtering
+
+    def setFilterNameOrID(self, text):
+        self.filter_text = text
+        self.invalidateFilter()  # Triggers a refresh of the filtering
+
+    def filterAcceptsRow(self, sourceRow, sourceParent):
+        model = self.sourceModel()
+        acceptable = True
+        if self.filter_surface and self.filter_surface != "Surface":
+            index = model.index(sourceRow, 2)  # Filtering based on column 2 (Surface)
+            acceptable = acceptable & (model.data(index) == self.filter_surface)
+        if self.filter_country and self.filter_country != "Country":
+            index = model.index(sourceRow, 4)  # Filtering based on column 4 (Country)
+            acceptable = acceptable & (model.data(index) == self.filter_country)
+        if self.filter_text:
+            index1 = model.index(sourceRow, 0)  # Filtering based on column 0 (ID)
+            index2 = model.index(sourceRow, 1)  # Filtering based on column 1 (Name)
+            id_check = self.filter_text.lower() in str(model.data(index1))
+            name_check = self.filter_text.lower() in model.data(index2).lower()
+            acceptable = acceptable & (id_check | name_check)
+        return acceptable
+
+
 
 def convert_stages_to_model_data(stages):
     """
@@ -206,17 +245,34 @@ class ListBoxExample(QWidget):
 
         layout.addWidget(self.map_list_lbl,8,0,alignment=Qt.AlignmentFlag.AlignCenter)
 
-        layout.addWidget(self.maps_tableview,9,0)
+        filters_layout = QHBoxLayout()
+        self.surface_filter = QComboBox()
+        self.surface_filter.addItem("Surface")
+        self.surface_filter.addItem("Tarmac")
+        self.surface_filter.addItem("Gravel")
+        self.surface_filter.addItem("Snow")
+        self.surface_filter.currentTextChanged.connect(self.surface_filter_apply)
+        filters_layout.addWidget(self.surface_filter)
+        self.country_filter = QComboBox()
+        countries = ["Country","AR","AT","AU","BE","BR","CA","CH","CN","CY","CZ","DE","EE","ES","FI","FI","FR","GB","GR","HU","IE","IT","JP","KE","LB","LT","LV","MC","MG","MX","NL","NZ","PL","PT","RO","SE","SI","SK","SM","UA","US"]
+        for country in countries:
+            self.country_filter.addItem(country)
+        self.country_filter.currentTextChanged.connect(self.country_filter_apply)
+        filters_layout.addWidget(self.country_filter)
+        layout.addLayout(filters_layout,9,0)
+
+
+        layout.addWidget(self.maps_tableview,10,0)
         # layout.addWidget(self.maps_table,9,0)
 
-        layout.addWidget(self.fav_list_lbl,8,2,alignment=Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.fav_list_lbl,9,2,alignment=Qt.AlignmentFlag.AlignCenter)
         # self.favs_list_widget.setMaximumWidth(200)
 
-        layout.addWidget(self.favs_tableview,9,2)
+        layout.addWidget(self.favs_tableview,10,2)
         # layout.addWidget(self.favs_list_widget,9,2)
 
 
-        layout.addLayout(fav_buttons_layout,9,1)
+        layout.addLayout(fav_buttons_layout,10,1)
         # layout.addWidget(self.add_fav_button,9,1)
         # layout.addWidget(self.remove_fav_button,10,1)
 
@@ -226,11 +282,11 @@ class ListBoxExample(QWidget):
         self.save_as_button.setMinimumWidth(120)
         save_as_layout.addWidget(self.save_as_button)
 
-        layout.addLayout(save_as_layout,11,2)
+        layout.addLayout(save_as_layout,12,2)
         self.set_default_fav_button.setMinimumHeight(40)
         self.set_default_fav_button.setFont(QFont('Arial', 15))
-        layout.addWidget(self.set_default_fav_button,12,0,1,3)
-        layout.addWidget(self.status_bar,13,0,1,3)
+        layout.addWidget(self.set_default_fav_button,13,0,1,3)
+        layout.addWidget(self.status_bar,14,0,1,3)
 
 
 
@@ -253,6 +309,16 @@ class ListBoxExample(QWidget):
 
     def init_data(self):
         pass
+
+    def surface_filter_apply(self, text):
+        self.proxy_model.setFilterSurface(text)
+        # self.maps_tableview.
+
+    def country_filter_apply(self, text):
+        self.proxy_model.setFilterCountry(text)
+
+    def text_filter_apply(self, text):
+        self.proxy_model.setFilterNameOrID(text)
 
     def show_file_dialog(self):
         dir = QFileDialog.getExistingDirectory(None, "Choose RBR install folder","C:\\", QFileDialog.Option.ShowDirsOnly)
@@ -301,11 +367,12 @@ class ListBoxExample(QWidget):
         self.stage_data = convert_stages_to_model_data(self.myfav.load_stages())
         model = StageTableModel(self.stage_data)
 
-        self.proxy_model = QSortFilterProxyModel()
+        self.proxy_model = StagesFilterProxyModel()
         self.proxy_model.setFilterKeyColumn(-1) # Search all columns.
         self.proxy_model.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self.proxy_model.setSourceModel(model)
-        self.search_box.textChanged.connect(self.proxy_model.setFilterFixedString)
+        # self.search_box.textChanged.connect(self.proxy_model.setFilterFixedString)
+        self.search_box.textChanged.connect(self.text_filter_apply)
 
         self.maps_tableview.setModel(self.proxy_model)
         self.maps_tableview.doubleClicked.connect(self.add_to_favorites)

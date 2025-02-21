@@ -6,8 +6,8 @@ default_path = os.path.abspath('C:\\Richard Burns Rally\\')
 #favorite_path = os.path.join(default_path, "rsfdata", "cache", "favorites.ini")
 favorite_prefix = "favorite_"
 # stages_json = default_path + rsfdata + cache + "stages_data.json"
-
-settings_file = os.path.join(os.path.curdir, "favorites_settings.ini")
+script_path = os.path.dirname(os.path.realpath(__file__))
+settings_file = os.path.join(script_path, "favorites_settings.ini")
 
 
 class FavoriteMgr:
@@ -56,8 +56,14 @@ class FavoriteMgr:
             return False
         self.path = rbr_path
         self.favorite_path = os.path.join(self.path, "rsfdata", "cache", "favorites.ini")
-        self.favorites_dir_path = os.path.join(self.path, "rsfdata", "cache")
+        # self.favorites_dir_path = os.path.join(self.path, "rsfdata", "cache")
+        self.favorites_dir_path = os.path.join(script_path, "favorites")
         self.stages_info_file = os.path.join(self.path, "rsfdata", "cache", "stages_data.json")
+        try:
+            os.mkdir(self.favorites_dir_path)
+        except:
+            # exception is raised if the dir exists
+            pass
         self.load_maps()
         return True
 
@@ -86,8 +92,9 @@ class FavoriteMgr:
         else:
             config_path = os.path.join(self.favorites_dir_path, favorite_prefix + fav_name + ".ini")
         config.read(config_path)
-        # backup the car config
-        self.cars = config["FavoriteCars"]
+        if default:
+            # backup the car config only from the favorites, so we keep this info
+            self.cars = config["FavoriteCars"]
         self.favorites = []
         for key in config["FavoriteStages"]:
             self.favorites.append(key)
