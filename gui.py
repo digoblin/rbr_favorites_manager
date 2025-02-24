@@ -3,7 +3,7 @@ from PyQt6 import QtCore
 from PyQt6.QtCore import Qt, QSortFilterProxyModel
 from PyQt6.QtWidgets import QFileDialog, QFrame, QHeaderView, QApplication, QHBoxLayout, QWidget, QVBoxLayout, \
     QListWidget, QPushButton, QLabel, QLineEdit, QStatusBar, QMainWindow, QTableWidget, QTableWidgetItem, QGridLayout, \
-    QSizePolicy, QTableView, QComboBox
+    QSizePolicy, QTableView, QComboBox, QMessageBox
 from PyQt6.QtGui import QFont
 
 import favorite_api
@@ -210,6 +210,8 @@ class ListBoxExample(QWidget):
         self.set_default_fav_button.clicked.connect(self.set_default_favs)
         self.show_file_dialog_button = QPushButton("Select folder")
         self.show_file_dialog_button.clicked.connect(self.show_file_dialog)
+        self.load_url_button = QPushButton("Load stages from URL")
+        self.load_url_button.clicked.connect(self.load_favorites_from_url)
 
         # Dialog
         self.file_dialog = QFileDialog()
@@ -225,6 +227,8 @@ class ListBoxExample(QWidget):
         self.save_as_line.setPlaceholderText("Save As")
         self.rbr_folder_line = QLineEdit()
         self.rbr_folder_line.setPlaceholderText("RBR install folder")
+        self.url_load_favorites_line = QLineEdit()
+        self.url_load_favorites_line.setPlaceholderText("Load favorites from URL")
 
 
         # Status bar
@@ -290,30 +294,30 @@ class ListBoxExample(QWidget):
         self.surface_filter.addItem("Gravel")
         self.surface_filter.addItem("Snow")
         self.surface_filter.currentTextChanged.connect(self.stage_surface_filter_apply)
-        filters_layout.addWidget(self.surface_filter)
         self.country_filter = QComboBox()
         countries = ["Country","AR","AT","AU","BE","BR","CA","CH","CN","CY","CZ","DE","EE","ES","FI","FI","FR","GB","GR","HU","IE","IT","JP","KE","LB","LT","LV","MC","MG","MX","NL","NZ","PL","PT","RO","SE","SI","SK","SM","UA","US"]
         for country in countries:
             self.country_filter.addItem(country)
         self.country_filter.currentTextChanged.connect(self.stage_country_filter_apply)
-        filters_layout.addWidget(self.country_filter)
         self.length_filter = QComboBox()
         for length in StagesFilterProxyModel.stage_length_filter_values:
             self.length_filter.addItem(length)
         self.length_filter.currentIndexChanged.connect(self.stage_length_filter_apply)
-        filters_layout.addWidget(self.length_filter)
         self.installed_filter = QComboBox()
         self.installed_filter.addItem("Installed")
         self.installed_filter.addItem("Yes")
         self.installed_filter.addItem("No")
         self.installed_filter.currentTextChanged.connect(self.stage_installed_filter_apply)
-        filters_layout.addWidget(self.installed_filter)
         self.new_filter = QComboBox()
         self.new_filter.addItem("New")
         self.new_filter.addItem("Yes")
         self.new_filter.addItem("No")
         self.new_filter.currentTextChanged.connect(self.stage_new_filter_apply)
+        filters_layout.addWidget(self.surface_filter)
+        filters_layout.addWidget(self.length_filter)
+        filters_layout.addWidget(self.country_filter)
         filters_layout.addWidget(self.new_filter)
+        filters_layout.addWidget(self.installed_filter)
         layout.addLayout(filters_layout,9,0)
 
 
@@ -325,17 +329,27 @@ class ListBoxExample(QWidget):
 
         layout.addLayout(fav_buttons_layout,10,1)
 
+        favorite_options_layout = QVBoxLayout()
         save_as_layout = QHBoxLayout()
         save_as_layout.addWidget(self.save_as_line)
         self.save_as_button.setMinimumHeight(30)
         self.save_as_button.setMinimumWidth(120)
         save_as_layout.addWidget(self.save_as_button)
+        favorite_options_layout.addLayout(save_as_layout)
+        load_url_layout = QHBoxLayout()
+        load_url_layout.addWidget(self.url_load_favorites_line)
+        self.load_url_button.setMinimumHeight(30)
+        load_url_layout.addWidget(self.load_url_button)
+        favorite_options_layout.addLayout(load_url_layout)
 
-        layout.addLayout(save_as_layout,12,2)
+        layout.addLayout(favorite_options_layout,12,2)
         self.set_default_fav_button.setMinimumHeight(40)
         self.set_default_fav_button.setFont(QFont('Arial', 15))
         layout.addWidget(self.set_default_fav_button,13,0,1,3)
-        layout.addWidget(self.status_bar,14,0,1,3)
+
+
+
+        layout.addWidget(self.status_bar,15,0,1,3)
 
         self.setLayout(layout)
 
@@ -346,6 +360,30 @@ class ListBoxExample(QWidget):
             self.rbr_folder_line.setText(self.myfav.path)
             self.set_rbr_folder()
 
+
+    def load_favorites_from_url_clicked(self):
+        dlg = QMessageBox(self)
+        dlg.setWindowTitle("Warning!")
+        dlg.setText("Loading a URL will replace the current favorites. Is this OK?")
+        # dlg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        dlg.setIcon(QMessageBox.Icon.Question)
+        dlg.setStandardButtons(
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel
+        )
+        button = dlg.exec()
+
+        if button == QMessageBox.StandardButton.Ok:
+            self.load_favorites_from_url()
+
+
+
+    def load_favorites_from_url(self):
+        url = self.url_load_favorites_line.text()
+        if self.myfav.load_favorites_from_url(url):
+            self.set_status(f"Loaded stages from {url}")
+            self.load_favorites_list()
+        else:
+            self.set_status("Not able to load the stages from the given URL")
 
 
     def stage_surface_filter_apply(self, text):

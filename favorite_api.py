@@ -1,4 +1,4 @@
-import os, shutil, configparser, json, re
+import os, shutil, configparser, json, re, requests
 from csv import excel_tab
 
 default_path = os.path.abspath('C:\\Richard Burns Rally\\')
@@ -214,7 +214,7 @@ class FavoriteMgr:
         """
         if self.stages is None:
             self.stages = []
-            with open(self.stages_info_file, 'r') as f:
+            with open(self.stages_info_file, 'r', encoding='windows-1250') as f:
                 temp_stages = json.loads(f.read())
                 self.load_existing_maps()
                 for stage in temp_stages:
@@ -238,7 +238,12 @@ class FavoriteMgr:
                 return stage
         return None
 
-
+    def load_favorites_from_url(self, url):
+        stage_ids = get_stages_from_url(url)
+        if stage_ids:
+            self.favorites = stage_ids
+            return True
+        return False
 
 
 def get_map_details(map_name):
@@ -270,3 +275,19 @@ def extract_existing_map_ids(folder):
                     yield stage_id
                 except:
                     pass
+
+
+
+def get_stages_from_url(url):
+    response = requests.get(url)
+    stages = get_stages_from_page(response.text)
+    return stages
+
+def get_stages_from_page(page):
+    result = []
+    pattern = re.compile('ID: (\d+)')
+    matches = re.findall(pattern, page)
+    for match in matches:
+        if match not in result:
+            result.append(match)
+    return result
