@@ -56,11 +56,17 @@ class StageTableModel(QtCore.QAbstractTableModel):
 
 
 class StagesFilterProxyModel(QSortFilterProxyModel):
+
+    stage_length_filter_values = ["Length", "0-3", "3-6", "6-9", "9-12", "12+"]
+
     def __init__(self):
         super().__init__()
         self.filter_surface = ""
         self.filter_country = ""
         self.filter_text = ""
+        self.filter_length = ""
+        self.filter_installed = ""
+        self.filter_new = ""
 
     def setFilterSurface(self, surface):
         self.filter_surface = surface
@@ -73,6 +79,19 @@ class StagesFilterProxyModel(QSortFilterProxyModel):
     def setFilterNameOrID(self, text):
         self.filter_text = text
         self.invalidateFilter()  # Triggers a refresh of the filtering
+        
+    def setFilterLength(self, index):
+        self.filter_length = index
+        self.invalidateFilter()  # Triggers a refresh of the filtering
+
+    def setFilterInstalled(self, text):
+        self.filter_installed = text
+        self.invalidateFilter()  # Triggers a refresh of the filtering
+
+    def setFilterNew(self, text):
+        self.filter_new = text
+        self.invalidateFilter()  # Triggers a refresh of the filtering
+
 
     def filterAcceptsRow(self, sourceRow, sourceParent):
         model = self.sourceModel()
@@ -89,6 +108,32 @@ class StagesFilterProxyModel(QSortFilterProxyModel):
             id_check = self.filter_text.lower() in str(model.data(index1))
             name_check = self.filter_text.lower() in model.data(index2).lower()
             acceptable = acceptable & (id_check | name_check)
+        if self.filter_length and self.filter_length != 0:
+            index = model.index(sourceRow, 3)  # Filtering based on column 3 (Length)
+            result = False
+            length_value = model.data(index)
+            if self.filter_length == 1:
+                # between 0 and 3
+                result = (length_value > 0 and length_value <= 3)
+            if self.filter_length == 2:
+                # between 3 and 6
+                result = (length_value > 3 and length_value <= 6)
+            if self.filter_length == 3:
+                # between 6 and 9
+                result = (length_value > 6 and length_value <= 9)
+            if self.filter_length == 4:
+                # between 9 and 12
+                result = (length_value > 9 and length_value <= 12)
+            if self.filter_length == 5:
+                # between 12+
+                result = (length_value > 12)
+            acceptable = acceptable & result
+        if self.filter_installed and self.filter_installed != "Installed":
+            index = model.index(sourceRow, 7)  # Filtering based on column 7 (Installed)
+            acceptable = acceptable & (self.filter_installed == model.data(index))
+        if self.filter_new and self.filter_new != "New":
+            index = model.index(sourceRow, 6)  # Filtering based on column 7 (Installed)
+            acceptable = acceptable & (self.filter_new == model.data(index))
         return acceptable
 
 
@@ -116,6 +161,8 @@ class ListBoxExample(QWidget):
     def __init__(self):
         super().__init__()
 
+        # INIT
+
         self.stage_data = None
         self.proxy_model = None
 
@@ -138,9 +185,9 @@ class ListBoxExample(QWidget):
         self.map_list_widget = QListWidget()
 
         # Tables
-        self.maps_table = QTableWidget()
-        self.maps_table.setMinimumHeight(200)
-        self.maps_table.horizontalHeader().sectionClicked.connect(self.table_item_clicked)
+        # self.maps_table = QTableWidget()
+        # self.maps_table.setMinimumHeight(200)
+        # self.maps_table.horizontalHeader().sectionClicked.connect(self.table_item_clicked)
 
 
         # Create QListWidget (ListBox)
@@ -174,7 +221,6 @@ class ListBoxExample(QWidget):
         self.search_box = QLineEdit()
         self.search_box.setMaxLength(10)
         self.search_box.setPlaceholderText("Search Maps")
-        # self.search_box.textChanged.connect(self.searched)
         self.save_as_line = QLineEdit()
         self.save_as_line.setPlaceholderText("Save As")
         self.rbr_folder_line = QLineEdit()
@@ -189,10 +235,8 @@ class ListBoxExample(QWidget):
 
         self.maps_tableview = QTableView()
         self.maps_tableview.setSortingEnabled(True)
-        # self.maps_tableview.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.favs_tableview = QTableView()
         self.favs_tableview.setSortingEnabled(True)
-        # layout.addWidget(self.maps_tableview,14,0)
 
         rbr_folder_hlayout = QHBoxLayout()
         rbr_folder_hlayout.addWidget(self.rbr_folder_lbl)
@@ -229,21 +273,15 @@ class ListBoxExample(QWidget):
         layout.addWidget(sep2,6,0,1,3)
 
         layout.addWidget(self.search_box,7,0)
-        # self.maps_tableview.setMinimumWidth(500)
-        # self.maps_table.setMinimumWidth(500)
-
-        # maps_layout = QHBoxLayout()
-        # maps_layout.addWidget(self.maps_table)
         fav_buttons_layout = QVBoxLayout()
         self.add_fav_button.setMinimumHeight(40)
         self.remove_fav_button.setMinimumHeight(40)
         fav_buttons_layout.addWidget(self.add_fav_button)
         fav_buttons_layout.addWidget(self.remove_fav_button)
-        # maps_layout.addLayout(fav_buttons_layout)
-        # maps_layout.addWidget(self.favs_list_widget)
-        # layout.addLayout(maps_layout,8,0,1,3)
 
         layout.addWidget(self.map_list_lbl,8,0,alignment=Qt.AlignmentFlag.AlignCenter)
+
+        # Filters
 
         filters_layout = QHBoxLayout()
         self.surface_filter = QComboBox()
@@ -251,30 +289,41 @@ class ListBoxExample(QWidget):
         self.surface_filter.addItem("Tarmac")
         self.surface_filter.addItem("Gravel")
         self.surface_filter.addItem("Snow")
-        self.surface_filter.currentTextChanged.connect(self.surface_filter_apply)
+        self.surface_filter.currentTextChanged.connect(self.stage_surface_filter_apply)
         filters_layout.addWidget(self.surface_filter)
         self.country_filter = QComboBox()
         countries = ["Country","AR","AT","AU","BE","BR","CA","CH","CN","CY","CZ","DE","EE","ES","FI","FI","FR","GB","GR","HU","IE","IT","JP","KE","LB","LT","LV","MC","MG","MX","NL","NZ","PL","PT","RO","SE","SI","SK","SM","UA","US"]
         for country in countries:
             self.country_filter.addItem(country)
-        self.country_filter.currentTextChanged.connect(self.country_filter_apply)
+        self.country_filter.currentTextChanged.connect(self.stage_country_filter_apply)
         filters_layout.addWidget(self.country_filter)
+        self.length_filter = QComboBox()
+        for length in StagesFilterProxyModel.stage_length_filter_values:
+            self.length_filter.addItem(length)
+        self.length_filter.currentIndexChanged.connect(self.stage_length_filter_apply)
+        filters_layout.addWidget(self.length_filter)
+        self.installed_filter = QComboBox()
+        self.installed_filter.addItem("Installed")
+        self.installed_filter.addItem("Yes")
+        self.installed_filter.addItem("No")
+        self.installed_filter.currentTextChanged.connect(self.stage_installed_filter_apply)
+        filters_layout.addWidget(self.installed_filter)
+        self.new_filter = QComboBox()
+        self.new_filter.addItem("New")
+        self.new_filter.addItem("Yes")
+        self.new_filter.addItem("No")
+        self.new_filter.currentTextChanged.connect(self.stage_new_filter_apply)
+        filters_layout.addWidget(self.new_filter)
         layout.addLayout(filters_layout,9,0)
 
 
         layout.addWidget(self.maps_tableview,10,0)
-        # layout.addWidget(self.maps_table,9,0)
 
         layout.addWidget(self.fav_list_lbl,9,2,alignment=Qt.AlignmentFlag.AlignCenter)
-        # self.favs_list_widget.setMaximumWidth(200)
 
         layout.addWidget(self.favs_tableview,10,2)
-        # layout.addWidget(self.favs_list_widget,9,2)
-
 
         layout.addLayout(fav_buttons_layout,10,1)
-        # layout.addWidget(self.add_fav_button,9,1)
-        # layout.addWidget(self.remove_fav_button,10,1)
 
         save_as_layout = QHBoxLayout()
         save_as_layout.addWidget(self.save_as_line)
@@ -288,10 +337,6 @@ class ListBoxExample(QWidget):
         layout.addWidget(self.set_default_fav_button,13,0,1,3)
         layout.addWidget(self.status_bar,14,0,1,3)
 
-
-
-
-
         self.setLayout(layout)
 
         # FavoriteMgr setup
@@ -302,23 +347,55 @@ class ListBoxExample(QWidget):
             self.set_rbr_folder()
 
 
-    # def update_maps_table_view(self):
-    #     stages_data = convert_stages_to_model_data(self.myfav.load_stages())
-    #     model = StageTableModel(stages_data)
-    #     self.maps_tableview.setModel(model)
 
-    def init_data(self):
-        pass
-
-    def surface_filter_apply(self, text):
+    def stage_surface_filter_apply(self, text):
+        """
+        Apply surface filter to maps
+        :param text:
+        :return:
+        """
         self.proxy_model.setFilterSurface(text)
-        # self.maps_tableview.
 
-    def country_filter_apply(self, text):
+    def stage_country_filter_apply(self, text):
+        """
+        Apply country filter to maps
+        :param text:
+        :return:
+        """
         self.proxy_model.setFilterCountry(text)
 
-    def text_filter_apply(self, text):
+    def stage_text_filter_apply(self, text):
+        """
+        Apply text filter to maps
+        :param text:
+        :return:
+        """
         self.proxy_model.setFilterNameOrID(text)
+
+    def stage_length_filter_apply(self, index):
+        """
+        Apply length filter to maps
+        :param index:
+        :return:
+        """
+        self.proxy_model.setFilterLength(index)
+
+    def stage_installed_filter_apply(self, text):
+        """
+        Apply installed filter to maps
+        :param text:
+        :return:
+        """
+        self.proxy_model.setFilterInstalled(text)
+
+    def stage_new_filter_apply(self, text):
+        """
+        Apply new filter to maps
+        :param text:
+        :return:
+        """
+        self.proxy_model.setFilterNew(text)
+
 
     def show_file_dialog(self):
         dir = QFileDialog.getExistingDirectory(None, "Choose RBR install folder","C:\\", QFileDialog.Option.ShowDirsOnly)
@@ -351,7 +428,7 @@ class ListBoxExample(QWidget):
                 self.myfav.load_favorite("", default=True)
                 self.load_favorites_list()
                 self.load_fav_files()
-                self.fill_maps_table(refresh=True)
+                # self.fill_maps_table(refresh=True)
 
                 self.load_stages()
 
@@ -372,7 +449,7 @@ class ListBoxExample(QWidget):
         self.proxy_model.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self.proxy_model.setSourceModel(model)
         # self.search_box.textChanged.connect(self.proxy_model.setFilterFixedString)
-        self.search_box.textChanged.connect(self.text_filter_apply)
+        self.search_box.textChanged.connect(self.stage_text_filter_apply)
 
         self.maps_tableview.setModel(self.proxy_model)
         self.maps_tableview.doubleClicked.connect(self.add_to_favorites)
@@ -391,12 +468,6 @@ class ListBoxExample(QWidget):
                 selected_id = model.data(model.index(index.row(),0))
                 self.myfav.add_favorite(selected_id)
             self.load_favorites_list()
-        # if self.maps_table.selectedItems():
-        #     current_row = self.maps_table.currentRow()
-        #     current_id = self.maps_table.item(current_row,0).text()
-        #     self.myfav.add_favorite(current_id)
-        #     self.load_favorites_list()
-
 
 
     def remove_from_favorites(self):
@@ -414,17 +485,6 @@ class ListBoxExample(QWidget):
             self.load_favorites_list()
 
 
-
-        # selected_items = self.favs_list_widget.selectedItems()
-        # current_row = self.favs_list_widget.currentRow()
-        # if current_row < 0:
-        #     return
-        # map_selected = self.favs_list_widget.item(current_row).text()
-        # details = fav.get_map_details(map_selected)
-        # if details['id'] in self.myfav.favorites:
-        #     self.myfav.remove_favorite(details['id'])
-        #     self.load_favorites_list()
-
     def save_as_favorites(self):
         """
         Called when the save as favorites button is pressed and saves the current selected favorites as a file with name from the text in the save_as_line widget
@@ -438,48 +498,20 @@ class ListBoxExample(QWidget):
             self.load_fav_files()
             self.set_status(f"Saved favorites as {file_path}")
 
-    def searched(self):
-        """
-        Called when text changes in the search box
-        :return:
-        """
-        # search_text = self.search_box.text()
-        #self.map_list_widget.findItems(search_text, Qt.MatchFlag.MatchContains)
-        # map_list = self.myfav.search_maps(self.search_box.text())
-        # self.set_map_list(map_list)
-        self.fill_maps_table(refresh=True)
-
-    def set_map_list(self, map_list):
-        """
-        Called to change the map list
-        :param map_list:
-        :return:
-        """
-        #self.map_list_widget = QListWidget()
-        self.map_list_widget.clear()
-        self.map_list_widget.addItems(map_list)
 
     def load_favorites_list(self):
         """
         Loads the current favorites in the List widget
         :return:
         """
-        # self.favs_list_widget.clear()
-        # self.favs_list_widget.addItems(self.myfav.get_favorites_names())
-
         stage_data = convert_stages_to_model_data(self.myfav.get_current_favorite_stages())
         model = StageTableModel(stage_data)
 
         proxy_model = QSortFilterProxyModel()
-        # proxy_model.setFilterKeyColumn(-1) # Search all columns.
-        # proxy_model.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         proxy_model.setSourceModel(model)
-        # self.search_box.textChanged.connect(proxy_model.setFilterFixedString)
 
         self.favs_tableview.setModel(proxy_model)
         self.favs_tableview.doubleClicked.connect(self.remove_from_favorites)
-
-
 
 
     def load_fav_files(self):
@@ -498,71 +530,71 @@ class ListBoxExample(QWidget):
         """
         self.status_bar.showMessage(text)
 
-    def fill_maps_table(self, refresh=False):
-        """
-        Fills the maps table with info on every existing stage from the current rbr Maps folder
-        :param refresh: used to filter the maps according to the search widget
-        :return:
-        """
+    # def fill_maps_table(self, refresh=False):
+    #     """
+    #     Fills the maps table with info on every existing stage from the current rbr Maps folder
+    #     :param refresh: used to filter the maps according to the search widget
+    #     :return:
+    #     """
+    #
+    #     all_maps = self.myfav.load_maps()
+    #     if refresh:
+    #         all_maps = self.myfav.search_maps(self.search_box.text())
+    #         self.maps_table.setRowCount(0)
+    #     all_stages = {}
+    #     for item in all_maps:
+    #         map_info = favorite_api.get_map_details(item)
+    #         details = self.myfav.get_stage_details(map_info["id"])
+    #         all_stages[map_info['id']] = details
+    #     #testing
+    #     all_stages = self.myfav.stages
+    #     self.maps_table.setRowCount(len(all_stages))
+    #     table_headers = ["ID", "Name", "Surface", "Length", "Country", "Author", "New"]
+    #     self.maps_table.setColumnCount(len(table_headers))
+    #     self.maps_table.setHorizontalHeaderLabels(table_headers)
+    #     self.maps_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+    #     # testing
+    #     # for i, stage in enumerate(all_stages.values()):
+    #     for i, stage in enumerate(all_stages):
+    #         item_id = QTableWidgetItem()
+    #         item_id.setData(Qt.ItemDataRole.DisplayRole, int(stage["id"]))
+    #         # item_id.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable)
+    #         item_name = QTableWidgetItem(stage["name"])
+    #         surface = "Gravel"
+    #         if stage["surface_id"] == "1":
+    #             surface = "Tarmac"
+    #         elif stage["surface_id"] == "3":
+    #             surface = "Snow"
+    #         item_surface = QTableWidgetItem(surface)
+    #         stage_length_km = round(int(stage["length"])/1000, 1)
+    #         # hack to use float and sort correctly
+    #         item_length = QTableWidgetItem()
+    #         item_length.setData(Qt.ItemDataRole.DisplayRole, stage_length_km)
+    #         item_country = QTableWidgetItem(stage['short_country'])
+    #         item_author = QTableWidgetItem(stage['author'])
+    #         item_new = QTableWidgetItem(("True" if stage["new_update"] == "1" else "False"))
+    #         self.maps_table.setItem(i, 0, item_id)
+    #         self.maps_table.setItem(i, 1, item_name)
+    #         self.maps_table.setItem(i, 2, item_surface)
+    #         self.maps_table.setItem(i, 3, item_length)
+    #         self.maps_table.setItem(i, 4, item_country)
+    #         self.maps_table.setItem(i, 5, item_author)
+    #         self.maps_table.setItem(i, 6, item_new)
+    #         self.maps_table.sortItems(0)
 
-        all_maps = self.myfav.load_maps()
-        if refresh:
-            all_maps = self.myfav.search_maps(self.search_box.text())
-            self.maps_table.setRowCount(0)
-        all_stages = {}
-        for item in all_maps:
-            map_info = favorite_api.get_map_details(item)
-            details = self.myfav.get_stage_details(map_info["id"])
-            all_stages[map_info['id']] = details
-        #testing
-        all_stages = self.myfav.stages
-        self.maps_table.setRowCount(len(all_stages))
-        table_headers = ["ID", "Name", "Surface", "Length", "Country", "Author", "New"]
-        self.maps_table.setColumnCount(len(table_headers))
-        self.maps_table.setHorizontalHeaderLabels(table_headers)
-        self.maps_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        # testing
-        # for i, stage in enumerate(all_stages.values()):
-        for i, stage in enumerate(all_stages):
-            item_id = QTableWidgetItem()
-            item_id.setData(Qt.ItemDataRole.DisplayRole, int(stage["id"]))
-            # item_id.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable)
-            item_name = QTableWidgetItem(stage["name"])
-            surface = "Gravel"
-            if stage["surface_id"] == "1":
-                surface = "Tarmac"
-            elif stage["surface_id"] == "3":
-                surface = "Snow"
-            item_surface = QTableWidgetItem(surface)
-            stage_length_km = round(int(stage["length"])/1000, 1)
-            # hack to use float and sort correctly
-            item_length = QTableWidgetItem()
-            item_length.setData(Qt.ItemDataRole.DisplayRole, stage_length_km)
-            item_country = QTableWidgetItem(stage['short_country'])
-            item_author = QTableWidgetItem(stage['author'])
-            item_new = QTableWidgetItem(("True" if stage["new_update"] == "1" else "False"))
-            self.maps_table.setItem(i, 0, item_id)
-            self.maps_table.setItem(i, 1, item_name)
-            self.maps_table.setItem(i, 2, item_surface)
-            self.maps_table.setItem(i, 3, item_length)
-            self.maps_table.setItem(i, 4, item_country)
-            self.maps_table.setItem(i, 5, item_author)
-            self.maps_table.setItem(i, 6, item_new)
-            self.maps_table.sortItems(0)
+    # def table_item_clicked(self):
+    #     current_col = self.maps_table.currentColumn()
+    #     self.maps_table.sortItems(current_col, self.get_sort())
+    #     print("derp")
 
-    def table_item_clicked(self):
-        current_col = self.maps_table.currentColumn()
-        self.maps_table.sortItems(current_col, self.get_sort())
-        print("derp")
-
-    def get_sort(self):
-        if self.sort_order is None:
-            self.sort_order = Qt.SortOrder.AscendingOrder
-        elif self.sort_order == Qt.SortOrder.AscendingOrder:
-            self.sort_order = Qt.SortOrder.DescendingOrder
-        else:
-            self.sort_order = Qt.SortOrder.AscendingOrder
-        return self.sort_order
+    # def get_sort(self):
+    #     if self.sort_order is None:
+    #         self.sort_order = Qt.SortOrder.AscendingOrder
+    #     elif self.sort_order == Qt.SortOrder.AscendingOrder:
+    #         self.sort_order = Qt.SortOrder.DescendingOrder
+    #     else:
+    #         self.sort_order = Qt.SortOrder.AscendingOrder
+    #     return self.sort_order
 
     def closeEvent(self, event):
         """

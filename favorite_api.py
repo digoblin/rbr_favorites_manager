@@ -161,13 +161,6 @@ class FavoriteMgr:
             existing_map_ids = extract_existing_map_ids(os.path.join(self.path, "Maps"))
             for existing_map in existing_map_ids:
                 self.all_existing_maps.append(int(existing_map))
-            # if os.path.isdir(self.path):
-            #     maps_dir = os.path.join(self.path, "Maps")
-            #     for item in os.listdir(maps_dir):
-            #         if os.path.isdir(os.path.join(maps_dir, item)):
-            #             # maps.append(item)
-            #             if item not in self.all_maps:
-            #                 self.all_maps.append(item)
         return self.all_existing_maps
 
     def add_favorite(self, fav_id):
