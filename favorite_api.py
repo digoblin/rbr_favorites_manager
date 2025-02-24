@@ -214,7 +214,7 @@ class FavoriteMgr:
         """
         if self.stages is None:
             self.stages = []
-            with open(self.stages_info_file, 'r', encoding='windows-1250') as f:
+            with open(self.stages_info_file, 'r', encoding='utf-8') as f:
                 temp_stages = json.loads(f.read())
                 self.load_existing_maps()
                 for stage in temp_stages:
