@@ -60,6 +60,7 @@ class StageTableModel(QtCore.QAbstractTableModel):
 class StagesFilterProxyModel(QSortFilterProxyModel):
 
     stage_length_filter_values = ["Length", "0-3", "3-6", "6-9", "9-12", "12+"]
+    stage_rating_filter_values = ["Rating", "0-1", "1-2", "2-3", "3-4", "4-5"]
 
     def __init__(self):
         super().__init__()
@@ -69,6 +70,7 @@ class StagesFilterProxyModel(QSortFilterProxyModel):
         self.filter_length = ""
         self.filter_installed = ""
         self.filter_new = ""
+        self.filter_rating = ""
 
     def setFilterSurface(self, surface):
         self.filter_surface = surface
@@ -92,6 +94,10 @@ class StagesFilterProxyModel(QSortFilterProxyModel):
 
     def setFilterNew(self, text):
         self.filter_new = text
+        self.invalidateFilter()  # Triggers a refresh of the filtering
+
+    def setFilterRating(self, index):
+        self.filter_rating = index
         self.invalidateFilter()  # Triggers a refresh of the filtering
 
 
@@ -136,6 +142,26 @@ class StagesFilterProxyModel(QSortFilterProxyModel):
         if self.filter_new and self.filter_new != "New":
             index = model.index(sourceRow, 6)  # Filtering based on column 7 (Installed)
             acceptable = acceptable & (self.filter_new == model.data(index))
+        if self.filter_rating and self.filter_rating != 0:
+            index = model.index(sourceRow, 8)  # Filtering based on column 8 (Rating)
+            result = False
+            rating_value = model.data(index)
+            if self.filter_rating == 1:
+                # between 0 and 1
+                result = (rating_value > 0 and rating_value <= 1)
+            if self.filter_rating == 2:
+                # between 1 and 2
+                result = (rating_value > 1 and rating_value <= 2)
+            if self.filter_rating == 3:
+                # between 2 and 3
+                result = (rating_value > 2 and rating_value <= 3)
+            if self.filter_rating == 4:
+                # between 3 and 4
+                result = (rating_value > 3 and rating_value <= 4)
+            if self.filter_rating == 5:
+                # between 4 and 5
+                result = (rating_value > 4 and rating_value <= 5)
+            acceptable = acceptable & result
         return acceptable
 
 
@@ -305,6 +331,10 @@ class ListBoxExample(QWidget):
         for length in StagesFilterProxyModel.stage_length_filter_values:
             self.length_filter.addItem(length)
         self.length_filter.currentIndexChanged.connect(self.stage_length_filter_apply)
+        self.rating_filter = QComboBox()
+        for rate in StagesFilterProxyModel.stage_rating_filter_values:
+            self.rating_filter.addItem(rate)
+        self.rating_filter.currentIndexChanged.connect(self.stage_rating_filter_apply)
         self.installed_filter = QComboBox()
         self.installed_filter.addItem("Installed")
         self.installed_filter.addItem("Yes")
@@ -320,6 +350,7 @@ class ListBoxExample(QWidget):
         filters_layout.addWidget(self.country_filter)
         filters_layout.addWidget(self.new_filter)
         filters_layout.addWidget(self.installed_filter)
+        filters_layout.addWidget(self.rating_filter)
         layout.addLayout(filters_layout,9,0)
 
 
@@ -420,6 +451,14 @@ class ListBoxExample(QWidget):
         :return:
         """
         self.proxy_model.setFilterLength(index)
+
+    def stage_rating_filter_apply(self, index):
+        """
+        Apply rating filter to maps
+        :param index:
+        :return:
+        """
+        self.proxy_model.setFilterRating(index)
 
     def stage_installed_filter_apply(self, text):
         """
