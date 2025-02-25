@@ -379,11 +379,12 @@ class ListBoxExample(QWidget):
 
     def load_favorites_from_url(self):
         url = self.url_load_favorites_line.text()
-        if self.myfav.load_favorites_from_url(url):
-            self.set_status(f"Loaded stages from {url}")
-            self.load_favorites_list()
-        else:
-            self.set_status("Not able to load the stages from the given URL")
+        if url != "":
+            if self.myfav.load_favorites_from_url(url):
+                self.set_status(f"Loaded stages from {url}")
+                self.load_favorites_list()
+            else:
+                self.set_status("Not able to load the stages from the given URL")
 
 
     def stage_surface_filter_apply(self, text):
