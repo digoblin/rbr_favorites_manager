@@ -290,7 +290,7 @@ def get_stages_ratings():
     """
     ratings = {}
     try:
-        with open(ratings_file, 'r', encoding='utf-8') as f:
+        with open(ratings_file, 'r', errors="replace") as f:
             reader = csv.DictReader(f)
             for line in reader:
                 sid = line['ID']
