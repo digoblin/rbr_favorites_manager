@@ -1,4 +1,4 @@
-import os, shutil, configparser, json, re, requests
+import os, shutil, configparser, json, re, requests, csv
 from csv import excel_tab
 
 default_path = os.path.abspath('C:\\Richard Burns Rally\\')
@@ -8,6 +8,7 @@ favorite_prefix = "favorite_"
 # stages_json = default_path + rsfdata + cache + "stages_data.json"
 script_path = os.path.dirname(os.path.realpath(__file__))
 settings_file = os.path.join(script_path, "favorites_settings.ini")
+ratings_file = os.path.join(script_path, "stage_ratings.csv")
 
 
 class FavoriteMgr:
@@ -217,12 +218,18 @@ class FavoriteMgr:
             with open(self.stages_info_file, 'r') as f:
                 temp_stages = json.loads(f.read())
                 self.load_existing_maps()
+                ratings = get_stages_ratings()
                 for stage in temp_stages:
                     stage_copy = stage.copy()
-                    if int(stage_copy["id"]) in self.all_existing_maps:
+                    sid = stage_copy['id']
+                    if int(sid) in self.all_existing_maps:
                         stage_copy.update({"exists":True})
                     else:
                         stage_copy.update({"exists":False})
+                    if sid in ratings:
+                        stage_copy.update({'avg_rating':ratings[sid]})
+                    else:
+                        stage_copy.update({'avg_rating':0})
                     self.stages.append(stage_copy)
         return self.stages
 
@@ -276,7 +283,22 @@ def extract_existing_map_ids(folder):
                 except:
                     pass
 
-
+def get_stages_ratings():
+    """
+    Returns the average rating from the ratings csv file
+    :return:
+    """
+    ratings = {}
+    try:
+        with open(ratings_file, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for line in reader:
+                sid = line['ID']
+                rating = line['Average Rating']
+                ratings[sid] = float(rating)
+    except Exception as err:
+        print(f"Error reading ratings file: {err}")
+    return ratings
 
 def get_stages_from_url(url):
     response = requests.get(url)

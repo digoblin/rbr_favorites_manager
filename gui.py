@@ -53,6 +53,8 @@ class StageTableModel(QtCore.QAbstractTableModel):
                     return "New"
                 elif section == 7:
                     return "Installed"
+                elif section == 8:
+                    return "Avg. Rating"
 
 
 class StagesFilterProxyModel(QSortFilterProxyModel):
@@ -154,7 +156,7 @@ def convert_stages_to_model_data(stages):
         stage_length_km = round(int(stage["length"])/1000, 1)
         item_new = ("Yes" if stage["new_update"] == "1" else "No")
         item_exists = ("Yes" if stage["exists"] == True else "No")
-        converted.append([int(stage["id"]), stage["name"], surface, stage_length_km, stage["short_country"], stage["author"], item_new, item_exists])
+        converted.append([int(stage["id"]), stage["name"], surface, stage_length_km, stage["short_country"], stage["author"], item_new, item_exists, stage['avg_rating']])
     return converted
 
 class ListBoxExample(QWidget):
