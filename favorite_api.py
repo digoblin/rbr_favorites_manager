@@ -1,4 +1,4 @@
-import os, shutil, configparser, json, re, requests, csv
+import os, shutil, configparser, json, re, requests, csv, chardet, logging
 from csv import excel_tab
 
 default_path = os.path.abspath('C:\\Richard Burns Rally\\')
@@ -10,6 +10,7 @@ script_path = os.path.dirname(os.path.realpath(__file__))
 settings_file = os.path.join(script_path, "favorites_settings.ini")
 ratings_file = os.path.join(script_path, "stage_ratings.csv")
 
+logger = logging.getLogger(__name__)
 
 class FavoriteMgr:
     def __init__(self, default=default_path):
@@ -32,34 +33,41 @@ class FavoriteMgr:
 
 
     def load_settings(self):
+        logger.info(f"Loading settings!")
         if os.path.isfile(settings_file):
             config = configparser.ConfigParser()
             config.read(settings_file)
             rbr_path = config["default"]["rbr_path"]
             if not self.set_default_path(rbr_path):
-                print("Error loading settings file")
-            print("Loaded rbr_path from settings")
+                logger.error(f"Error loading settings file")
+            logger.info("Loaded rbr_path from settings")
             return rbr_path
         return None
 
     def save_settings(self):
+        logger.info("Saving settings")
         if self.path:
             config = configparser.ConfigParser()
             config["default"] = {}
             config["default"]["rbr_path"] = self.path
             with open(settings_file, 'w') as f:
                 config.write(f)
-            print("Settings saved!")
+            logger.info("Settings saved!")
 
     def set_default_path(self, rbr_path):
+        logger.info(f"Setting default path to: {rbr_path}")
         if not os.path.isdir(os.path.join(rbr_path,"Maps")):
             # Probably not the RBR install folder
+            logger.error("Maps subfolder not found! default path not set!")
             return False
         self.path = rbr_path
         self.favorite_path = os.path.join(self.path, "rsfdata", "cache", "favorites.ini")
+        logger.debug(f"favorite_path: {self.favorite_path}")
         # self.favorites_dir_path = os.path.join(self.path, "rsfdata", "cache")
         self.favorites_dir_path = os.path.join(script_path, "favorites")
+        logger.debug(f"favorites_dir_path: {self.favorites_dir_path}")
         self.stages_info_file = os.path.join(self.path, "rsfdata", "cache", "stages_data.json")
+        logger.debug(f"stages_info_file: {self.stages_info_file}")
         try:
             os.mkdir(self.favorites_dir_path)
         except:
@@ -73,10 +81,12 @@ class FavoriteMgr:
         Search the favorites dir for favorite files
         :return:
         """
-        items = os.listdir(os.path.join(self.favorites_dir_path))
+        logger.info("Loading favorite files")
+        items = os.listdir(self.favorites_dir_path)
         favorites_list = []
         for item in items:
             if os.path.isfile(os.path.join(self.favorites_dir_path, item)) and favorite_prefix in item:
+                logger.debug(f"Found favorite: {item}")
                 favorites_list.append(item.split(".")[0].replace(favorite_prefix, ""))
         return favorites_list
 
@@ -87,6 +97,7 @@ class FavoriteMgr:
         :param default: if choosing the default favorites file
         :return:
         """
+        logger.info(f"Loading favorite file: {fav_name} | default: {default}")
         config = configparser.ConfigParser()
         if default:
             config_path = self.favorite_path
@@ -106,6 +117,7 @@ class FavoriteMgr:
         Returns the current favorite stages as a list of stage objects
         :return:
         """
+        logger.info("Getting current favorite stages")
         stages = []
         for fav_id in self.favorites:
             stage = self.get_stage_details(fav_id)
@@ -114,6 +126,7 @@ class FavoriteMgr:
         return stages
 
     def save_favorite(self, fav_name, default=False):
+        logger.info(f"Saving current favorites as: {fav_name} | default: {default}")
         config = configparser.ConfigParser()
         config["FavoriteCars"] = self.cars
         config["FavoriteStages"] = {}
@@ -134,6 +147,7 @@ class FavoriteMgr:
     def backup_original(self):
         backup_path = os.path.join(self.favorites_dir_path, favorite_prefix + "original.ini")
         if not os.path.isfile(backup_path):
+            logger.info("Backing up original favorites file")
             shutil.copy(self.favorite_path, backup_path)
 
     def load_maps(self):
@@ -142,6 +156,7 @@ class FavoriteMgr:
         :return: list of map names
         """
         if len(self.all_maps) == 0:
+            logger.info("Loading maps")
             self.all_maps = []
             if os.path.isdir(self.path):
                 maps_dir = os.path.join(self.path, "Maps")
@@ -158,6 +173,7 @@ class FavoriteMgr:
         :return: list of map names
         """
         if len(self.all_existing_maps) == 0:
+            logger.debug("Loading existing maps")
             self.all_existing_maps = []
             existing_map_ids = extract_existing_map_ids(os.path.join(self.path, "Maps"))
             for existing_map in existing_map_ids:
@@ -165,12 +181,15 @@ class FavoriteMgr:
         return self.all_existing_maps
 
     def add_favorite(self, fav_id):
+        logger.info(f"Adding to favorites: {fav_id}")
         if str(fav_id) not in self.favorites:
             self.favorites.append(str(fav_id))
 
     def remove_favorite(self, fav_id):
+        logger.info(f"Removing from favorites: {fav_id}")
         self.favorites.remove(str(fav_id))
 
+    #TODO: REMOVE
     def get_favorites_names(self):
         names = []
         for map_name in self.all_maps:
@@ -179,6 +198,7 @@ class FavoriteMgr:
                 names.append(map_name)
         return names
 
+    #TODO: REMOVE
     def search_maps(self, text):
         """
         Given the text, search for existing maps that contain the text
@@ -214,6 +234,7 @@ class FavoriteMgr:
         :return:
         """
         if self.stages is None:
+            logger.info("Loading all stages")
             self.stages = []
             with open(self.stages_info_file, 'r') as f:
                 temp_stages = json.loads(f.read())
@@ -239,6 +260,7 @@ class FavoriteMgr:
         :param stage_id: the stage id
         :return: dict - stage details
         """
+        logger.info(f"Getting stage details for: {stage_id}")
         self.load_stages()
         for stage in self.stages:
             if stage["id"] == stage_id:
@@ -246,13 +268,14 @@ class FavoriteMgr:
         return None
 
     def load_favorites_from_url(self, url):
+        logger.info(f"Loading favorites from URL: {url}")
         stage_ids = get_stages_from_url(url)
         if stage_ids:
             self.favorites = stage_ids
             return True
         return False
 
-
+#TODO: REMOVE
 def get_map_details(map_name):
     try:
         map_id = map_name.split("-")[0]
@@ -269,6 +292,7 @@ def extract_existing_map_ids(folder):
     :param isdir:
     :return:
     """
+    logger.info(f"Extracting existing maps from: {folder}")
     for item in os.listdir(folder):
         current_path = os.path.join(folder, item)
         if os.path.isdir(current_path):
@@ -288,28 +312,38 @@ def get_stages_ratings():
     Returns the average rating from the ratings csv file
     :return:
     """
+    logger.info("Getting stage ratings")
     ratings = {}
     try:
-        with open(ratings_file, 'r', errors="replace") as f:
+        encod = None
+        with open(ratings_file, "rb") as file:
+            encod = chardet.detect(file.read())  # Read a portion of the file
+            logger.debug(f'ratings_file has encoding: {encod["encoding"]}')
+        with open(ratings_file, 'r', encoding= encod['encoding'], errors="replace") as f:
             reader = csv.DictReader(f)
             for line in reader:
-                sid = line['ID']
+                sid = str(line['ID'])
                 rating = line['Average Rating']
                 ratings[sid] = float(rating)
     except Exception as err:
-        print(f"Error reading ratings file: {err}")
+        logger.error(f"Error reading ratings file: {err}")
     return ratings
 
 def get_stages_from_url(url):
+    logger.info(f"Getting URL: {url}")
     response = requests.get(url)
+    logger.debug(f"URL status code: {response.status_code}")
     stages = get_stages_from_page(response.text)
     return stages
 
 def get_stages_from_page(page):
+    logger.debug("Getting stages from page")
     result = []
     pattern = re.compile('ID: (\d+)')
     matches = re.findall(pattern, page)
     for match in matches:
         if match not in result:
+            logger.debug(f"Found match: {match}")
             result.append(match)
+    logger.debug(f"Found {len(result)} stages")
     return result

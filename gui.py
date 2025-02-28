@@ -1,4 +1,4 @@
-import sys
+import sys, logging, argparse, os
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt, QSortFilterProxyModel
 from PyQt6.QtWidgets import QFileDialog, QFrame, QHeaderView, QApplication, QHBoxLayout, QWidget, QVBoxLayout, \
@@ -9,6 +9,8 @@ from PyQt6.QtGui import QFont
 import favorite_api
 # from PySide6 import QtCore, QtWidgets, QtGui
 import favorite_api as fav
+
+logger = None
 
 class StageTableModel(QtCore.QAbstractTableModel):
     def __init__(self, data):
@@ -73,30 +75,37 @@ class StagesFilterProxyModel(QSortFilterProxyModel):
         self.filter_rating = ""
 
     def setFilterSurface(self, surface):
+        logger.debug(f"Setting surface filter to: {surface}")
         self.filter_surface = surface
         self.invalidateFilter()  # Triggers a refresh of the filtering
 
     def setFilterCountry(self, country):
+        logger.debug(f"Setting country filter to: {country}")
         self.filter_country = country
         self.invalidateFilter()  # Triggers a refresh of the filtering
 
     def setFilterNameOrID(self, text):
+        logger.debug(f"Setting NameOrId filter to: {text}")
         self.filter_text = text
         self.invalidateFilter()  # Triggers a refresh of the filtering
-        
+
     def setFilterLength(self, index):
+        logger.debug(f"Setting length filter to: {index}")
         self.filter_length = index
         self.invalidateFilter()  # Triggers a refresh of the filtering
 
     def setFilterInstalled(self, text):
+        logger.debug(f"Setting installed filter to: {text}")
         self.filter_installed = text
         self.invalidateFilter()  # Triggers a refresh of the filtering
 
     def setFilterNew(self, text):
+        logger.debug(f"Setting new filter to: {text}")
         self.filter_new = text
         self.invalidateFilter()  # Triggers a refresh of the filtering
 
     def setFilterRating(self, index):
+        logger.debug(f"Setting rating filter to: {index}")
         self.filter_rating = index
         self.invalidateFilter()  # Triggers a refresh of the filtering
 
@@ -412,11 +421,14 @@ class ListBoxExample(QWidget):
 
     def load_favorites_from_url(self):
         url = self.url_load_favorites_line.text()
+        logger.info(f"Loading favorites from URL: {url}")
         if url != "":
             if self.myfav.load_favorites_from_url(url):
+                logger.info(f"Loaded stages from: {url}")
                 self.set_status(f"Loaded stages from {url}")
                 self.load_favorites_list()
             else:
+                logger.error(f"Not able to load favorites from: {url}")
                 self.set_status("Not able to load the stages from the given URL")
 
 
@@ -480,16 +492,19 @@ class ListBoxExample(QWidget):
     def show_file_dialog(self):
         dir = QFileDialog.getExistingDirectory(None, "Choose RBR install folder","C:\\", QFileDialog.Option.ShowDirsOnly)
         if dir != "":
+            logger.info(f"Chosen RBR install folder: {dir}")
             self.rbr_folder_line.setText(dir)
             self.set_rbr_folder()
 
     def set_default_favs(self):
+        logger.info("Saving favorites as default")
         file_path = self.myfav.save_favorite("", default=True)
         self.set_status(f"Saved favorites as {file_path}")
 
     def load_favorite_file(self):
         current_row = self.fav_files_list_widget.currentRow()
         fav_file_name = self.fav_files_list_widget.item(current_row).text()
+        logger.info(f"Loading favorite file: {fav_file_name}")
         self.myfav.load_favorite(fav_file_name)
         self.load_favorites_list()
         self.save_as_line.setText(fav_file_name.split(".")[0])
@@ -502,7 +517,7 @@ class ListBoxExample(QWidget):
         :return:
         """
         rbr_folder_text = self.rbr_folder_line.text()
-        print(f"Setting rbr folder to: {rbr_folder_text}")
+        logger.info(f"Setting rbr folder to: {rbr_folder_text}")
         if rbr_folder_text != "":
             if self.myfav.set_default_path(rbr_folder_text):
                 self.myfav.load_favorite("", default=True)
@@ -521,6 +536,7 @@ class ListBoxExample(QWidget):
         Loads the stage TableView with data
         :return:
         """
+        logger.info("Loading stages tableview")
         self.stage_data = convert_stages_to_model_data(self.myfav.load_stages())
         model = StageTableModel(self.stage_data)
 
@@ -546,6 +562,7 @@ class ListBoxExample(QWidget):
             for index in indexes:
                 model = self.maps_tableview.model()
                 selected_id = model.data(model.index(index.row(),0))
+                logger.info(f"Adding favorite: {selected_id}")
                 self.myfav.add_favorite(selected_id)
             self.load_favorites_list()
 
@@ -560,6 +577,7 @@ class ListBoxExample(QWidget):
             for index in indexes:
                 model = self.favs_tableview.model()
                 selected_id = model.data(model.index(index.row(),0))
+                logger.info(f"Removing favorite: {selected_id}")
                 self.myfav.remove_favorite(selected_id)
                 # self.myfav.add_favorite(selected_id)
             self.load_favorites_list()
@@ -574,6 +592,7 @@ class ListBoxExample(QWidget):
         if save_text == "":
             self.set_status("Please provide a name for the favorite")
         else:
+            logger.info(f"Saving favorites as: {save_text}")
             file_path = self.myfav.save_favorite(save_text)
             self.load_fav_files()
             self.set_status(f"Saved favorites as {file_path}")
@@ -584,6 +603,7 @@ class ListBoxExample(QWidget):
         Loads the current favorites in the List widget
         :return:
         """
+        logger.info("Loading favorites tableview")
         stage_data = convert_stages_to_model_data(self.myfav.get_current_favorite_stages())
         model = StageTableModel(stage_data)
 
@@ -599,6 +619,7 @@ class ListBoxExample(QWidget):
         Loads the existing favorite files in the List widget
         :return:
         """
+        logger.info("Loading favorite files")
         self.fav_files_list_widget.clear()
         self.fav_files_list_widget.addItems(self.myfav.load_favorite_files())
 
@@ -608,6 +629,7 @@ class ListBoxExample(QWidget):
         :param text: text to show
         :return:
         """
+        logger.info(f"Setting status message:{text}")
         self.status_bar.showMessage(text)
 
     # def fill_maps_table(self, refresh=False):
@@ -682,9 +704,42 @@ class ListBoxExample(QWidget):
         :param event:
         :return:
         """
+        logger.info("Shuting down, saving settings!")
         self.myfav.save_settings()
 
+def setup_logging(debug_mode=False):
+    """Configure logging for the entire application."""
+    if debug_mode:
+        # Ensure the logs directory exists
+        log_dir = "logs"
+        os.makedirs(log_dir, exist_ok=True)
+
+        # Configure root logger to write to file
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format='[%(asctime)s][%(filename)s][%(funcName)s][%(levelname)s]: %(message)s',
+            filename=os.path.join(log_dir, 'debug.log'),
+            filemode='a'  # 'w' overwrites the file each run, 'a' would append
+        )
+        logging.debug("Debug logging started")
+    else:
+        # Configure to discard all messages
+        logging.basicConfig(
+            level=logging.CRITICAL + 1  # Higher than any defined level
+        )
+
+
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--debug', action='store_true', help='Enable debug logging to file')
+    args = parser.parse_args()
+
+    # Configure logging based on arguments
+    setup_logging(args.debug)
+    logger = logging.getLogger(__name__)
+    logger.debug("Started debugging!")
+
     app = QApplication(sys.argv)
     window = ListBoxExample()
     window.show()
