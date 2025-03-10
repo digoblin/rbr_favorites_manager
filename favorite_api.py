@@ -6,7 +6,7 @@ default_path = os.path.abspath('C:\\Richard Burns Rally\\')
 #favorite_path = os.path.join(default_path, "rsfdata", "cache", "favorites.ini")
 favorite_prefix = "favorite_"
 # stages_json = default_path + rsfdata + cache + "stages_data.json"
-script_path = os.path.dirname(os.path.realpath(__file__))
+script_path = os.path.dirname(os.getcwd())
 settings_file = os.path.join(script_path, "favorites_settings.ini")
 ratings_file = os.path.join(script_path, "stage_ratings.csv")
 
@@ -42,6 +42,8 @@ class FavoriteMgr:
                 logger.error(f"Error loading settings file")
             logger.info("Loaded rbr_path from settings")
             return rbr_path
+        else:
+            logger.info("No settings file!")
         return None
 
     def save_settings(self):
@@ -97,20 +99,27 @@ class FavoriteMgr:
         :param default: if choosing the default favorites file
         :return:
         """
-        logger.info(f"Loading favorite file: {fav_name} | default: {default}")
-        config = configparser.ConfigParser()
-        if default:
-            config_path = self.favorite_path
-        else:
-            config_path = os.path.join(self.favorites_dir_path, favorite_prefix + fav_name + ".ini")
-        config.read(config_path)
-        if default:
-            # backup the car config only from the favorites, so we keep this info
-            self.cars = config["FavoriteCars"]
-        self.favorites = []
-        for key in config["FavoriteStages"]:
-            self.favorites.append(key)
-        self.current_favorite_file = fav_name
+        try:
+            logger.info(f"Loading favorite file: {fav_name} | default: {default}")
+            config = configparser.ConfigParser()
+            if default:
+                config_path = self.favorite_path
+            else:
+                config_path = os.path.join(self.favorites_dir_path, favorite_prefix + fav_name + ".ini")
+            logger.debug(f"Loading favorites from file: {config_path}")
+            config.read(config_path)
+            if default:
+                logger.debug(f"Saving the cars!")
+                # backup the car config only from the favorites, so we keep this info
+                if "FavoriteCars" in config:
+                    self.cars = config["FavoriteCars"]
+            self.favorites = []
+            for key in config["FavoriteStages"]:
+                self.favorites.append(key)
+            self.current_favorite_file = fav_name
+        except Exception as err:
+            logger.error(f"Error: {err}\nError loading favorite: {fav_name} | default: {default} | favorite_path: {self.favorite_path}")
+
 
     def get_current_favorite_stages(self):
         """
@@ -128,7 +137,10 @@ class FavoriteMgr:
     def save_favorite(self, fav_name, default=False):
         logger.info(f"Saving current favorites as: {fav_name} | default: {default}")
         config = configparser.ConfigParser()
-        config["FavoriteCars"] = self.cars
+        if self.cars:
+            config["FavoriteCars"] = self.cars
+        else:
+            config["FavoriteCars"] = {}
         config["FavoriteStages"] = {}
         if default:
             self.backup_original()
