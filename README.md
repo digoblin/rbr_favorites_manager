@@ -20,7 +20,7 @@ This is the program's main window:
 ![Main window](menu.png)
 
 1. Start by selecting the RBR install folder, if needed press the "Set RBR Install folder" button
-2. This will display all created favorites listing so far, they are saved as "favorite_[name]" in the **[RBRINSTALLDIR]/rsfdata/cache/** folder
+2. This will display all created favorites listing so far, they are saved as "favorite_[name]" in the **./favorites/** folder
 3. Search for maps or/and use the filters
 4. Use the button to include or exclude maps to the current selected favorites (double clicking a row also works)
 5. Save the current favorites with a name (for creating custom listings)
