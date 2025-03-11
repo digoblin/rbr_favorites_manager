@@ -12,6 +12,12 @@ import favorite_api as fav
 
 logger = None
 icon_name = "rbr_icon.ico"
+# Try to find the icon, check also the _internal folder
+if not os.path.isfile(icon_name):
+    internal_path = os.path.join("_internal", icon_name)
+    if os.path.isfile(internal_path):
+        icon_name = internal_path
+
 
 class StageTableModel(QtCore.QAbstractTableModel):
     def __init__(self, data):

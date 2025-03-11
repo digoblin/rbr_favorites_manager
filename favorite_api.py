@@ -6,9 +6,15 @@ default_path = os.path.abspath('C:\\Richard Burns Rally\\')
 #favorite_path = os.path.join(default_path, "rsfdata", "cache", "favorites.ini")
 favorite_prefix = "favorite_"
 # stages_json = default_path + rsfdata + cache + "stages_data.json"
-script_path = os.path.dirname(os.getcwd())
+script_path = os.path.dirname(os.path.abspath(__file__))
 settings_file = os.path.join(script_path, "favorites_settings.ini")
 ratings_file = os.path.join(script_path, "stage_ratings.csv")
+# Try to find the ratings file, check also the _internal folder
+if not os.path.isfile(ratings_file):
+    internal_path = os.path.join("_internal", "stage_ratings.csv")
+    if os.path.isfile(internal_path):
+        ratings_file = internal_path
+
 
 logger = logging.getLogger(__name__)
 
