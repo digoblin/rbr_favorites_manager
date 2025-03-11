@@ -4,13 +4,14 @@ from PyQt6.QtCore import Qt, QSortFilterProxyModel
 from PyQt6.QtWidgets import QFileDialog, QFrame, QHeaderView, QApplication, QHBoxLayout, QWidget, QVBoxLayout, \
     QListWidget, QPushButton, QLabel, QLineEdit, QStatusBar, QMainWindow, QTableWidget, QTableWidgetItem, QGridLayout, \
     QSizePolicy, QTableView, QComboBox, QMessageBox
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QIcon
 
 import favorite_api
 # from PySide6 import QtCore, QtWidgets, QtGui
 import favorite_api as fav
 
 logger = None
+icon_name = "rbr_icon.jpg"
 
 class StageTableModel(QtCore.QAbstractTableModel):
     def __init__(self, data):
@@ -199,7 +200,7 @@ class ListBoxExample(QWidget):
         super().__init__()
 
         # INIT
-
+        self.setWindowIcon(QIcon(icon_name))
         self.stage_data = None
         self.proxy_model = None
 
