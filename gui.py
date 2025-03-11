@@ -11,7 +11,7 @@ import favorite_api
 import favorite_api as fav
 
 logger = None
-icon_name = "rbr_icon.jpg"
+icon_name = "rbr_icon.ico"
 
 class StageTableModel(QtCore.QAbstractTableModel):
     def __init__(self, data):
