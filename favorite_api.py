@@ -64,6 +64,10 @@ class FavoriteMgr:
             return False
         self.path = rbr_path
         self.favorite_path = os.path.join(self.path, "rsfdata", "cache", "favorites.ini")
+        if not os.path.isfile(self.favorite_path):
+            logger.debug("default favorites file not found, creating it empty!")
+            # if the favorites does not exist, create it empty
+            open(self.favorite_path, 'w').close()
         logger.debug(f"favorite_path: {self.favorite_path}")
         # self.favorites_dir_path = os.path.join(self.path, "rsfdata", "cache")
         self.favorites_dir_path = os.path.join(script_path, "favorites")
